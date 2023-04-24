@@ -47,7 +47,7 @@ func AUTH(next http.Handler, secret string) http.Handler {
 		}
 
 		// parse token
-		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		token, err := jwt.ParseWithClaims(tokenString, &jwt.MapClaims{}, func(token *jwt.Token) (interface{}, error) {
 			return []byte(secret), nil
 		})
 		if err != nil || !token.Valid {
@@ -56,13 +56,13 @@ func AUTH(next http.Handler, secret string) http.Handler {
 		}
 
 		// parse permissions from token claim
-		claims, ok := token.Claims.(jwt.MapClaims)
+		claims, ok := token.Claims.(*jwt.MapClaims)
 		if !ok {
 			UnauthorisedResponse(fmt.Errorf("expected a valid token in x-authorization header")).ServeHTTP(rw, req)
 			return
 		}
 
-		permissions := parseGroupRoles(claims["permissions"].(string))
+		permissions := parseGroupRoles((*claims)["permissions"].(string))
 		if permissions == nil {
 			UnauthorisedResponse(fmt.Errorf("expected a valid token in x-authorization header")).ServeHTTP(rw, req)
 			return
