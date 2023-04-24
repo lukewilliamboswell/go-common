@@ -3,10 +3,24 @@ package common
 import (
 	"fmt"
 	"net/http"
-	"strings"
+	"time"
 
-	"github.com/golang-jwt/jwt"
+	"github.com/dgrijalva/jwt-go/v4"
 )
+
+func CreateJWTToken(secret string, expirationDelta time.Duration) (string, error) {
+	token := jwt.NewWithClaims(jwt.SigningMethodRS512, jwt.MapClaims{
+		"exp": time.Now().Add(time.Hour * expirationDelta).Unix(),
+		"iat": time.Now().Unix(),
+	})
+
+	signedToken, err := token.SignedString([]byte(secret))
+	if err != nil {
+		return "", err
+	}
+
+	return signedToken, nil
+}
 
 func AUTH(next http.Handler, secret string) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
@@ -24,11 +38,7 @@ func AUTH(next http.Handler, secret string) http.Handler {
 				tokenString = query["x-authorization"][0]
 			}
 		} else {
-			if strings.HasPrefix(authHeader, "Bearer ") {
-				tokenString = authHeader[7:]
-			} else {
-				tokenString = authHeader
-			}
+			tokenString = authHeader[7:]
 		}
 
 		if len(tokenString) <= 0 {
@@ -48,16 +58,15 @@ func AUTH(next http.Handler, secret string) http.Handler {
 		// parse permissions from token claim
 		claims, ok := token.Claims.(jwt.MapClaims)
 		if !ok {
-			UnauthorisedResponse(fmt.Errorf("invalid token claims")).ServeHTTP(rw, req)
-			return
-		}
-
-		permissionsStr, ok := claims["permissions"].(string)
-		if !ok {
 			UnauthorisedResponse(fmt.Errorf("expected a valid token in x-authorization header")).ServeHTTP(rw, req)
 			return
 		}
-		permissions := parseGroupRoles(permissionsStr)
+
+		permissions := parseGroupRoles(claims["permissions"].(string))
+		if permissions == nil {
+			UnauthorisedResponse(fmt.Errorf("expected a valid token in x-authorization header")).ServeHTTP(rw, req)
+			return
+		}
 
 		// add permissions to context
 		SetPermissions(req, permissions)

@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang-jwt/jwt"
+	"github.com/dgrijalva/jwt-go/v4"
 )
 
 func TestAUTH(t *testing.T) {
@@ -30,7 +30,8 @@ func TestAUTH(t *testing.T) {
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"permissions": string(permissionsBytes),
-		"exp":         time.Now().Add(time.Hour).Unix(),
+		"exp":         jwt.At(time.Now().Add(time.Hour)),
+		"iat":         jwt.At(time.Now()),
 	})
 
 	tokenString, _ := token.SignedString([]byte(secret))
