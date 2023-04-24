@@ -48,15 +48,16 @@ func AUTH(next http.Handler, secret string) http.Handler {
 		// parse permissions from token claim
 		claims, ok := token.Claims.(jwt.MapClaims)
 		if !ok {
-			UnauthorisedResponse(fmt.Errorf("expected a valid token in x-authorization header")).ServeHTTP(rw, req)
+			UnauthorisedResponse(fmt.Errorf("invalid token claims")).ServeHTTP(rw, req)
 			return
 		}
 
-		permissions := parseGroupRoles(claims["permissions"])
-		if permissions == nil {
+		permissionsStr, ok := claims["permissions"].(string)
+		if !ok {
 			UnauthorisedResponse(fmt.Errorf("expected a valid token in x-authorization header")).ServeHTTP(rw, req)
 			return
 		}
+		permissions := parseGroupRoles(permissionsStr)
 
 		// add permissions to context
 		SetPermissions(req, permissions)

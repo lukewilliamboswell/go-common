@@ -22,27 +22,18 @@ type key int
 
 const PermissionsKey key = 123234
 
-func parseGroupRoles(v interface{}) []GroupRoles {
-
-	if v == nil {
+func parseGroupRoles(permissionsStr string) []GroupRoles {
+	if permissionsStr == "" {
 		return nil
 	}
 
-	// convert to json
-	data, err := json.Marshal(v)
-	if err != nil {
-		return nil
-	}
-
-	// parse back
-	result := make([]GroupRoles, 0)
-	err = json.Unmarshal(data, &result)
+	var result []GroupRoles
+	err := json.Unmarshal([]byte(permissionsStr), &result)
 	if err != nil {
 		return nil
 	}
 
 	return result
-
 }
 
 type GroupRoles struct {

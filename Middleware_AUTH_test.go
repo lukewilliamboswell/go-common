@@ -1,6 +1,7 @@
 package common
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -19,14 +20,17 @@ func TestAUTH(t *testing.T) {
 	authMiddleware := AUTH(testHandler, secret)
 
 	// Generate a valid JWT token.
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"permissions": []GroupRoles{
-			{
-				GroupID: 1,
-				RoleIDs: []int{1, 2},
-			},
+	permissions := []GroupRoles{
+		{
+			GroupID: 1,
+			RoleIDs: []int{1, 2},
 		},
-		"exp": time.Now().Add(time.Hour).Unix(),
+	}
+	permissionsBytes, _ := json.Marshal(permissions)
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"permissions": string(permissionsBytes),
+		"exp":         time.Now().Add(time.Hour).Unix(),
 	})
 
 	tokenString, _ := token.SignedString([]byte(secret))
