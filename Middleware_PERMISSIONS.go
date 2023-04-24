@@ -3,10 +3,20 @@ package common
 import (
 	"encoding/json"
 	"errors"
-	"github.com/gorilla/context"
 	"log"
 	"net/http"
+
+	"context"
 )
+
+type contextKey string
+
+const PermissionsContextKey contextKey = "permissions"
+
+func SetPermissions(r *http.Request, permissions []GroupRoles) {
+	ctx := context.WithValue(r.Context(), PermissionsContextKey, permissions)
+	*r = *r.WithContext(ctx)
+}
 
 type key int
 
@@ -25,13 +35,13 @@ func parseGroupRoles(v interface{}) []GroupRoles {
 	}
 
 	// parse back
-	permissions := make([]GroupRoles, 0)
-	err = json.Unmarshal(data, &permissions)
+	result := make([]GroupRoles, 0)
+	err = json.Unmarshal(data, &result)
 	if err != nil {
 		return nil
 	}
 
-	return permissions
+	return result
 
 }
 
@@ -40,18 +50,11 @@ type GroupRoles struct {
 	RoleIDs []int `json:"roleIDs"`
 }
 
-func SetPermissions(req *http.Request, permissions []GroupRoles) {
-	context.Set(req, PermissionsKey, permissions)
-}
-
 func GetPermissions(req *http.Request) []GroupRoles {
-
-	if rv := context.Get(req, PermissionsKey); rv != nil {
+	if rv := req.Context().Value(PermissionsContextKey); rv != nil {
 		return rv.([]GroupRoles)
 	}
-
 	return nil
-
 }
 
 var ErrIncorrectPermissions error = errors.New("incorrect permissions, missing group or role to perform this action")
@@ -69,14 +72,14 @@ func MustHaveGroupRole(next http.Handler, groupID, roleID int) http.Handler {
 			return
 		}
 
-		for i, _ := range permissions {
+		for i := range permissions {
 
 			// ignore other groupIDs
 			if permissions[i].GroupID != groupID {
 				continue
 			}
 
-			for j, _ := range permissions[i].RoleIDs {
+			for j := range permissions[i].RoleIDs {
 
 				if permissions[i].RoleIDs[j] != roleID {
 					continue

@@ -1,7 +1,6 @@
 package common
 
 import (
-	"fmt"
 	"net/http"
 )
 
@@ -14,7 +13,6 @@ func CORS(next http.Handler) http.Handler {
 
 		if req.Method == "OPTIONS" {
 			rw.WriteHeader(http.StatusOK)
-			fmt.Fprint(rw, "")
 		} else {
 			next.ServeHTTP(rw, req)
 		}

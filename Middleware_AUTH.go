@@ -2,8 +2,10 @@ package common
 
 import (
 	"fmt"
-	jwt "github.com/dgrijalva/jwt-go"
 	"net/http"
+	"strings"
+
+	"github.com/golang-jwt/jwt"
 )
 
 func AUTH(next http.Handler, secret string) http.Handler {
@@ -22,7 +24,11 @@ func AUTH(next http.Handler, secret string) http.Handler {
 				tokenString = query["x-authorization"][0]
 			}
 		} else {
-			tokenString = authHeader[7:]
+			if strings.HasPrefix(authHeader, "Bearer ") {
+				tokenString = authHeader[7:]
+			} else {
+				tokenString = authHeader
+			}
 		}
 
 		if len(tokenString) <= 0 {
@@ -40,7 +46,13 @@ func AUTH(next http.Handler, secret string) http.Handler {
 		}
 
 		// parse permissions from token claim
-		permissions := parseGroupRoles(token.Claims["permissions"])
+		claims, ok := token.Claims.(jwt.MapClaims)
+		if !ok {
+			UnauthorisedResponse(fmt.Errorf("expected a valid token in x-authorization header")).ServeHTTP(rw, req)
+			return
+		}
+
+		permissions := parseGroupRoles(claims["permissions"])
 		if permissions == nil {
 			UnauthorisedResponse(fmt.Errorf("expected a valid token in x-authorization header")).ServeHTTP(rw, req)
 			return
